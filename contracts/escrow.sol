@@ -15,7 +15,7 @@ contract Escrow {
         uint256 amount;
         string description;
         Status status;
-        uint256 initiator;
+        address initiator;
     }
     partyContract[] public contracts;
     mapping(uint256 => uint256) public allFunds;
@@ -24,8 +24,7 @@ contract Escrow {
         address _creditor,
         address _debtor,
         string calldata _description,
-        uint256 _amount,
-        uint256 _initiator
+        uint256 _amount
     ) external {
         partyContract memory initiate = partyContract(
             _creditor,
@@ -33,7 +32,7 @@ contract Escrow {
             _amount,
             _description,
             Status.Created,
-            _initiator
+            msg.sender
         );
         contracts.push(initiate);
     }
@@ -41,18 +40,14 @@ contract Escrow {
     // both party to be onboarded before funding
     function onBoard(uint256 _id) public {
         partyContract storage data = contracts[_id];
-        if (data.initiator == 0) {
+        if (msg.sender == data.creditor || msg.sender == data.debtor) {
             require(
-                msg.sender == data.creditor,
-                "only creditor can call this function!"
+                data.initiator != msg.sender,
+                "you have already initialized the contract"
             );
             data.status = Status.OnBoarded;
         } else {
-            require(
-                msg.sender == data.debtor,
-                "only debtor can call this function!"
-            );
-            data.status = Status.OnBoarded;
+            revert("you are not a party in this contract!");
         }
     }
 
@@ -69,7 +64,7 @@ contract Escrow {
         );
         require(
             msg.value == data.amount,
-            "the amount should be equal to the aggred terms"
+            "the amount should be equal to the agreed values!"
         );
         allFunds[_id] = msg.value;
         data.status = Status.Funded;
